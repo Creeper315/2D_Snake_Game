@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <title>Snake Game !!!!!</title>
+  <link rel="shortcut icon" href="/Users/creep/Documents/图片/icon.png" type="image/x-icon">
+</head>
+<body>
+  <p class="a">&hearts;&clubs; &Tab;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&Sopf;&nopf;&aopf;&kopf;&eopf; &emsp;&emsp;&emsp;&nbsp;&nbsp; &sung;&sung;&sung;&emsp;&emsp;&emsp;&nbsp; &spades;&diams;</p>
+
+  <script defer>
+  var game_width = 33;   // suggested width; 33
+  var game_height = 30;  // suggested height; 30
+  var pixel_w = 13;        // width of each little pixel.
+  var init_length = 4;    // snake initial length
+  var game_speed = 94;
+  var num_of_food = 3;
+  var bkgd_color = '#dbe0d0'; // background
+  var snake_color = '#8ad12e';
+  var food_color = '#4abce2';
+  var h = {i:0, j:0, prev: 'no'};       // head object. position of head. prev means direction of previous head.
+  var t = {i:0, j:0};      // tail object
+  var isGameOver = false;
+  var isPaused = true;   //initially, the game is Paused, need to press 'space' to start game.
+  var interval_ID;    // this var is used for clearInterval to work properly.
+  var empty_pixels = game_width * game_height - init_length; // Keep track of the number of empty pixels left, in case if snake fill up the whole screen...
+
+  function create2DArray(rows) {
+    var arr = [];
+    for (var i=0;i<=rows+1;i++) { // game board 比实际画面大一圈，防止蛇撞墙时候游戏卡死 （rows + 1）
+      arr[i] = [];
+    }
+    return arr;
+  }
+  var array = create2DArray(game_height);  // initialize the array used throughout this program!!
+  function initialize_gameBoard(){
+    for (var j = 1; j <= game_height; j++) {
+      var c = document.createDocumentFragment();  // this line is necessary, idk why...
+      for (var i = 1; i <= game_width; i++) {
+        var e = document.createElement('td');
+        e.style.backgroundColor = '#'+Math.random().toString(16).substr(-6);
+        e.width = pixel_w;
+        e.height = e.width;
+        c.appendChild(e);  //append e to c, then append c to doc.body...
+        var obj = {
+          food: false,
+          snake: false,
+          dir: 'no', // dir means direction. 'no' means this block is not snake body.
+          ele: e,
+        }
+        array[j][i] = obj;
+      }
+      document.body.appendChild(c);
+      var tr = document.createElement('tr');   // need to create a line break every time...
+      document.body.appendChild(tr);
+    }
+  }
+  initialize_gameBoard();
+  function render_gameBoard(){
+    clearInterval(interval_ID);
+    isGameOver = true;
+    isPaused = true;  // is this line necessary ?
+    for (var j = 1; j <= game_height; j++) {
+      for (var i = 1; i <= game_width; i++) {
+        array[j][i].ele.style.backgroundColor = '#'+Math.random().toString(16).substr(-6);
+        array[j][i].snake = false;
+        array[j][i].food = false;
+        array[j][i].dir = 'no';
+      }
+    }
+  }
+  function get_random_int_between(a, b){
+    return a + Math.floor(Math.random() * (b - a + 1));
+  }
+  function create_food(){
+    var j; var i;
+    do {
+      j = get_random_int_between(1, game_height);
+      i = get_random_int_between(1, game_width);
+    } while (array[j][i].snake === true || array[j][i].food === true);
+
+    array[j][i].food = true;
+    array[j][i].ele.style.backgroundColor = food_color;
+  }
+  function resetGame(){
+    clearInterval(interval_ID);
+    isGameOver = false;         // reset these conditions
+    isPaused = true;
+    empty_pixels = game_width * game_height - init_length;
+    for (var j = 1; j <= game_height; j++) {
+      for (var i = 1; i <= game_width; i++) {
+        array[j][i].ele.style.backgroundColor = bkgd_color;
+        array[j][i].snake = false;
+        array[j][i].food = false;
+        array[j][i].dir = 'no';
+      }
+    }
+    var i = Math.floor(game_width / 2);
+    var j = Math.floor(game_height * 3 / 5);
+    var head_j = j;
+    for (var n = 0; n < init_length; n++) {
+      array[j][i].ele.style.backgroundColor = snake_color;
+      array[j][i].dir = 'up';
+      array[j][i].snake = true;
+      j++;        // j increamented 1 extra time, so it's just below tail.
+    }
+    j--;        // So, i need to decrement i one more time
+    h.prev = 'down';
+    h.i = i; h.j = head_j;
+    t.i = i; t.j = j;        // I think here, i, j has no bug. (hopefully)
+    for (var i = num_of_food; i > 0; i--) {
+      create_food();
+    }  }
+  function new_head(j, i, dir){
+    array[j][i].ele.style.backgroundColor = snake_color;
+    array[j][i].dir = dir;
+    array[j][i].snake = true;
+  }
+  function delete_tail(j, i){
+    array[j][i].ele.style.backgroundColor = bkgd_color;
+    array[j][i].snake = false;
+    switch (array[j][i].dir) {        // this switch, update the new tail.
+      case 'up': t.j--; break;
+      case 'right': t.i++; break;
+      case 'left': t.i--; break;
+      case 'down': t.j++; break;
+      case 'no': alert('Something wrong with delete_tail() ???'); break;
+      //default:
+    }
+    array[j][i].dir = 'no';      // deleted tail direction to 'no'
+  }
+  function out_boundary(j, i) {
+    return j < 1 || j > game_height || i < 1 || i > game_width;// return whether j or i is out of boundary...
+  }
+  function if_next_step_game_over(j, i){
+    if (out_boundary(j, i) || array[j][i].snake && !(j === t.j && i === t.i) ){
+      game_over();  // IMPORTANT : ↑↑↑ in this 'if' conditoin, out_boundary() must be placed on the left side of '||'
+      return true;  // because if snake gose out of boundary, array[j][i] is not defined!! out_boundary() should be executed first.
+    }return false;
+  }
+  function next_step_has_food(j, i){
+    return array[j][i].food;
+  }
+  function moveSnake_helper(j, i, dir) {
+    if ( ! if_next_step_game_over(j, i)) {
+      var bool = next_step_has_food(j, i);
+      if ( ! bool) { delete_tail(t.j, t.i); }
+      new_head(j, i, dir);
+      if (bool) {
+        empty_pixels -- ;      // Must decrement empty_pixels before 'if(empty_pixels === 0)'...
+        console.log(empty_pixels);
+        if (empty_pixels === num_of_food - 1) {
+          alert('wow ! You beat the game ! Congratulations !')
+          game_over();
+          return;        // This return; here is necessary, when NO empty pixels are left on screen, we return, so we skip create_food(). otherwise it result in an infinit loop to call create_food()...
+        }
+        array[j][i].food = false;
+        create_food();
+      }
+    }
+  }
+  function moveSnake(){
+    switch (array[h.j][h.i].dir) {
+      case 'up':
+      var dir = 'up';
+      h.prev = 'down';
+      h.j --;                // update the j value in object h, hope no Bug here...
+      moveSnake_helper(h.j, h.i, dir);
+      break;
+
+      case 'right':
+      var dir = 'right';
+      h.prev = 'left';
+      h.i ++;
+      moveSnake_helper(h.j, h.i, dir);
+      break;
+
+      case 'left':
+      var dir = 'left';
+      h.prev = 'right'
+      h.i --;
+      moveSnake_helper(h.j, h.i, dir);
+      break;
+
+      case 'down':
+      var dir = 'down';
+      h.prev = 'up'
+      h.j ++;
+      moveSnake_helper(h.j, h.i, dir);
+      break;
+
+      case 'no': alert('Something is wrong with moveSnake() function ???'); break;
+      //default:
+    }
+  }
+  function game_over(){
+    clearInterval(interval_ID);
+    isPaused = true;   // here, also set this
+    isGameOver = true;
+    alert('Game Over !! HA HA HA');
+  }
+  document.addEventListener('keydown', (event) => {
+    const keyName = event.key;
+    //alert('keydown event\n\n' + 'key: ' + keyName);
+    switch (keyName) {
+      case 'ArrowUp':
+      if (h.prev !== 'up') {   // add this line to prevent snake go 180 degree backwards
+        array[h.j][h.i].dir = 'up';
+      }
+      break;
+
+      case 'ArrowRight':
+      if (h.prev !== 'right') {
+        array[h.j][h.i].dir = 'right';
+      }
+      break;
+
+      case 'ArrowLeft':
+      if (h.prev !== 'left') {
+        array[h.j][h.i].dir = 'left';
+      }
+      break;
+
+      case 'ArrowDown':
+      if (h.prev !== 'down') {
+        array[h.j][h.i].dir = 'down';
+      }
+      break;
+
+      case ' ':
+      if (!isGameOver) {
+        if (isPaused) {
+          interval_ID = setInterval(moveSnake, game_speed);
+        } else {
+          clearInterval(interval_ID);
+        }
+        isPaused = !isPaused;
+      }
+      break;
+
+      case 'z':
+      resetGame();
+      break;
+
+      case 'x':
+      render_gameBoard();
+      break;
+    }
+  });
+  </script>
+  <h3>&ensp;'z'： 重头开始<br>'空格'： 暂停/继续 <br> &ensp;'x'： 屏幕雪花 </h3>
+
+</body>
+</html>
