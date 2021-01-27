@@ -1,2 +1,3 @@
-# ihi
-This is read me fileee nothing inside
+# 2D Snake Game
+
+2018 Aug-7, my first program, a simple snake game
